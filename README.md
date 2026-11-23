@@ -1,100 +1,147 @@
-# Sistema de Biblioteca — Padrões de Projeto GoF
+# Biblioteca GoF — Java 17 + Maven + CLI + MySQL
 
-Projeto acadêmico de **Modelagem de Sistemas Computacionais** desenvolvido em **Java 17**, com **Maven**, interface de linha de comando (CLI), testes automatizados com **JUnit 5** e duas famílias de persistência: **em memória** e **MySQL**.
+Projeto de **Modelagem de Sistemas Computacionais (PUCPR, 2º semestre de 2026)** para implementar cadastro, reserva, empréstimo, renovação, devolução, multas e organização do acervo, aplicando os **dez padrões GoF** do enunciado e preservando os pontos internos `Acervo`, `Relacionamento` e `Movimentacao`.
 
-O sistema implementa operações de cadastro e circulação de livros e demonstra, por meio de código e diagramas UML, a aplicação de **10 padrões de projeto GoF**.
-## Funcionalidades
+## Requisitos de execução
 
-- Cadastro e consulta de pessoas, estudantes, atendentes e livros.
-- Reserva, empréstimo e renovação de livros, com limite de **duas renovações**.
-- Devolução, cálculo de multa por atraso e acompanhamento de quitação.
-- Inspeção do exemplar, encaminhamento para reparo, retorno ao acervo e baixa por laudo irrecuperável.
-- Integração simulada com dois formatos de API bancária.
-- Consulta de metadados com cache e métricas.
-- Organização hierárquica do acervo em unidades, seções e subseções.
-- Proteção contra processamento duplicado de comandos.
+- **JDK 17+**, configurado com `JAVA_HOME`.
+- **Apache Maven 3.9+** (para obter JUnit e driver JDBC na primeira compilação).
+- **MySQL 8.x** somente para o perfil relacional, com tabelas criadas a partir de `src/main/resources/schema.sql`. Alternativamente, Docker Compose.
+- Terminal UTF-8 recomendado; no Windows, antes do comando, use `chcp 65001` se o console mostrar acentuação incorreta.
 
-## Padrões GoF aplicados
+**Comando único para compilar, testar e abrir o menu**, usando a família em memória:
 
-| Nº | Padrão | Aplicação no sistema |
-|---|---|---|
-| 01 | **State** | Controla os estados do livro: livre, reservado, emprestado, renovado, devolvido, reparando e incinerado. |
-| 02 | **Strategy** | Permite selecionar políticas de multa: cobrança original, com teto ou com tolerância. |
-| 03 | **Adapter** | Padroniza a comunicação com dois bancos que recebem valores e documentos em formatos diferentes. |
-| 04 | **Facade** | Centraliza as operações de circulação e coordena os subsistemas e suas transações. |
-| 05 | **Observer** | Notifica ouvintes independentes após a devolução: inspeção, multa, indicadores e aviso simulado. |
-| 06 | **Command** | Encapsula solicitações de reserva e renovação, com UUID e execução idempotente. |
-| 07 | **Template Method** | Padroniza o fluxo de cadastro e os pré-requisitos de cada tipo de registro. |
-| 08 | **Abstract Factory** | Fornece famílias compatíveis de repositórios e unidades de trabalho para memória ou MySQL. |
-| 09 | **Decorator** | Adiciona cache e medição de acessos às consultas sem alterar a implementação básica. |
-| 10 | **Composite** | Organiza o acervo em uma árvore de grupos e itens, com contagem recursiva e movimentação entre seções. |
+```bash
+mvn -q clean test exec:java
+```
 
-## Tecnologias
-
-- **Java 17** — linguagem principal.
-- **Apache Maven** — gerenciamento do projeto e dependências.
-- **JUnit 5** — testes automatizados.
-- **MySQL 8** e **JDBC** — persistência relacional.
-- **Docker Compose** — inicialização opcional do banco de desenvolvimento.
-- **Astah UML** — modelagem e edição dos diagramas.
-
-## Como executar o projeto Java
-
-**Pré-requisitos:** JDK 17 ou superior e Maven 3.9+ (ou Maven integrado ao IntelliJ IDEA). Para o perfil em memória, **não é necessário iniciar o MySQL**.
-
-No terminal, dentro da pasta que contém `pom.xml`:
+Rodar apenas os testes automatizados:
 
 ```bash
 mvn clean test
-mvn exec:java
 ```
 
-Também é possível abrir o projeto pelo **IntelliJ IDEA**, importar o `pom.xml`, executar a classe `br.edu.pucpr.biblioteca.cli.Main` e rodar os testes em `CenariosGoFTest`.
+Abrir o menu sem executar os testes novamente:
 
-### Demonstração pela CLI
+```bash
+mvn -q exec:java
+```
 
-O programa exibe um menu com 21 operações, entre elas cadastro, reserva, empréstimo, renovação, devolução, multas e organização do acervo. A **opção 17 — DEMO completa** executa um fluxo com reserva, empréstimo, renovação, devolução cinco dias após o vencimento e emissão de multa.
+O menu exibe as operações de cadastro, circulação, consulta, multa, reparo/incineração e organização em seções. **A opção 17 executa um fluxo completo**, com reserva, empréstimo, renovação, devolução atrasada em cinco dias e emissão de multa pelo Observer. O menu chama apenas tratadores; regras ficam no domínio.
 
-Por padrão, o programa é iniciado com **persistência em memória** (`BIBLIOTECA_PERFIL=memoria`) e adaptador do **banco A**. Os dados desse perfil não permanecem após encerrar a aplicação.
+## Famílias de persistência (Abstract Factory)
 
-## Persistência em memória e MySQL
+O **perfil `memoria` é padrão** e usa `FabricaMemoria`, com mapas em RAM e unidade de trabalho por cópia/snapshot, para testes determinísticos e rollback. O **perfil `mysql`** usa `FabricaMysql`, com `RepositorioLivro`, `RepositorioRelacionamento` e `RepositorioMovimentacao` JDBC, compartilhando a conexão JDBC ativa da `UnidadeMysql`. A seleção ocorre uma vez em `SistemaBiblioteca.criarFamilia(...)`; não se misturam implementações das famílias.
 
-O padrão **Abstract Factory** disponibiliza duas implementações independentes:
-
-- **`FabricaMemoria`**: repositórios em memória e rollback por snapshot; usada principalmente nos testes e nas demonstrações locais.
-- **`FabricaMysql`**: repositórios JDBC com uma conexão compartilhada por transação, `commit` e `rollback`.
-
-Para iniciar o MySQL com Docker Compose, na pasta do projeto Java:
+### MySQL com Docker
 
 ```bash
 docker compose up -d
 ```
 
-No Windows PowerShell, configure o perfil MySQL antes de executar a aplicação:
+O serviço inicializa a base `biblioteca_gof`, cria as tabelas na primeira execução e publica MySQL em `localhost:3307`. Parâmetros **somente de desenvolvimento** usados pelo Compose: usuário `biblioteca`, senha `biblioteca`.
 
-```powershell
-$env:BIBLIOTECA_PERFIL = "mysql"
-$env:BIBLIOTECA_JDBC_URL = "jdbc:mysql://localhost:3306/biblioteca_gof"
-$env:BIBLIOTECA_DB_USUARIO = "biblioteca"
-$env:BIBLIOTECA_DB_SENHA = "biblioteca"
-mvn exec:java
+Linux/macOS:
+
+```bash
+export BIBLIOTECA_PERFIL=mysql
+export BIBLIOTECA_JDBC_URL='jdbc:mysql://localhost:3307/biblioteca_gof'
+export BIBLIOTECA_DB_USUARIO=biblioteca
+export BIBLIOTECA_DB_SENHA=biblioteca
+mvn -q clean test exec:java
 ```
 
-As credenciais acima são **somente para desenvolvimento local** e correspondem ao exemplo de `compose.yaml`. Não utilize essas senhas em produção.
+Windows PowerShell:
 
-O esquema relacional está em `src/main/resources/schema.sql`. A hierarquia do Composite permanece em memória mesmo no perfil MySQL; a persistência SQL é destinada aos repositórios de domínio e circulação.
+```powershell
+$env:BIBLIOTECA_PERFIL='mysql'
+$env:BIBLIOTECA_JDBC_URL='jdbc:mysql://localhost:3307/biblioteca_gof'
+$env:BIBLIOTECA_DB_USUARIO='biblioteca'
+$env:BIBLIOTECA_DB_SENHA='biblioteca'
+mvn -q clean test exec:java
+```
 
-## Testes
+Sem Docker, crie a base manualmente e aplique `src/main/resources/schema.sql`:
 
-A suíte `CenariosGoFTest` contém **11 testes automatizados**, cobrindo os dez requisitos GoF, incluindo um teste adicional de rollback da fachada.
+```sql
+CREATE DATABASE biblioteca_gof CHARACTER SET utf8mb4;
+USE biblioteca_gof;
+-- executar o conteúdo de src/main/resources/schema.sql
+```
 
-**Resultado verificado no IntelliJ IDEA:** 11 testes executados e **11 aprovados**, com zero falhas. No cenário Observer, as mensagens de falha simulada do servidor de e-mail são esperadas: servem para confirmar que um ouvinte com erro não interrompe os demais.
+A conexão é aberta **por transação e por thread**, com `autoCommit=false`, `commit`, `rollback` e leitura de dados críticos `FOR UPDATE`. O perfil em memória **não tenta acessar o MySQL**. Oracle permanece fora da aplicação de escrita (réplica prevista na modelagem).
 
-Existe também `MysqlIntegracaoOpcionalTest`, executado somente mediante configuração de um banco de testes MySQL (`TEST_MYSQL_URL`). A aprovação dos 11 testes em memória **não substitui** a validação dessa integração em um servidor MySQL real.
+### Outras configurações
 
+| Variável | Valor padrão | Finalidade |
+|---|---|---|
+| `BIBLIOTECA_PERFIL` | `memoria` | `memoria`/`teste` ou `mysql`/`producao` |
+| `BIBLIOTECA_BANCO` | `A` | `A` ou `B` (simuladores incompatíveis) |
+| `BIBLIOTECA_POLITICA` | `ORIGINAL` | `ORIGINAL`, `TETO_20`, `TOLERANCIA_2` |
+| `BIBLIOTECA_JDBC_URL` | `jdbc:mysql://localhost:3307/biblioteca_gof` | Endereço JDBC |
+| `BIBLIOTECA_DB_USUARIO` | `root` | Usuário SQL |
+| `BIBLIOTECA_DB_SENHA` | vazio | Senha SQL |
 
-## Considerações
+Para testar manualmente a política com tolerância, configure `BIBLIOTECA_POLITICA=TOLERANCIA_2`: cinco dias de atraso passam a custar R$ 3,00, enquanto `ORIGINAL` cobra R$ 5,00. A política fica gravada no boleto e mudar a configuração não altera boletos emitidos.
 
-Os adaptadores bancários e o envio de e-mail são **simulações de integração**, desenvolvidas para demonstrar os padrões de projeto. A aplicação foi elaborada para fins acadêmicos, não para operação bancária real.
+## Padrões GoF implementados
 
-O projeto Java foi desenvolvido com apoio de ferramenta de IA e está sujeito à revisão e compreensão pela equipe; o arquivo `REGISTRO_LLM.md` documenta esse apoio quando o código-fonte for publicado.
+| Nº | GoF | Participantes do código | Prova automatizada |
+|---|---|---|---|
+| R01 | **State** | `Livro`, `EstadosLivro.Situacao`, sete classes de estado | Terceira renovação recusada; devolvido bloqueia reserva; incineração após laudo; exclusão só em LIVRE |
+| R02 | **Strategy** | `PoliticasMulta.Politica`, `Original`, `ComTeto`, `ComTolerancia`, `ServicoMultas` | R$ 5/3/0; boleto não recalculado |
+| R03 | **Adapter** | `Bancos.CobrancaInstitucional`, `AdaptadorBancoA/B`, `ApiBancoA/B` | 700 centavos / R$ 7,00; CPF sem máscara (A) e com máscara (B); quitação idempotente |
+| R04 | **Facade** | `FachadaCirculacao`, `Acervo`, `Movimentacao`, `Relacionamento` | Reserva consumida e empréstimo atômico; falha provocada gera rollback |
+| R05 | **Observer** | `Devolucoes.Publicador`, `EmissorMulta`, `FilaInspecao`, `Indicadores`, `AvisoEmail` | Inspeção/multa/métricas; falha de ouvinte isolada |
+| R06 | **Command** | `Comandos.Comando`, `Reserva`, `Renovacao`, `Executor` | Duas submissões simultâneas do mesmo UUID = uma renovação |
+| R07 | **Template Method** | `Cadastros.Modelo.incluir` (final), `LivroCadastro`, `PessoaCadastro`, `EstudanteCadastro`, `AtendenteCadastro` | Duplicidade devolve existente; pré-requisito antes de armazenar |
+| R08 | **Abstract Factory** | `Contratos.FabricaPersistencia`, `FabricaMemoria`, `FabricaMysql` e unidades de trabalho | Família escolhida por perfil; repositórios homogêneos |
+| R09 | **Decorator** | `Consultas.ConsultaAcervo`, `Original`, `Cache`, `Metrica` | Segundo acesso cacheado mas medido; reserva vê estado vivo; falha do cache degrada para a consulta original |
+| R10 | **Composite** | `HierarquiaAcervo.No`, `Grupo`, `Item`, `Registro` | Contagem 3+2=5; mover sem tocar no livro/emprestimo |
+
+Detalhamento de classes, papéis e testes em [docs/RASTREABILIDADE.md](docs/RASTREABILIDADE.md).
+
+## Tests
+
+Os testes estão em `src/test/java/br/edu/pucpr/biblioteca/CenariosGoFTest.java`: **13 casos cobrindo os dez requisitos (R01, R04 e R09 têm dois)**. Há ainda `MysqlIntegracaoOpcionalTest`, **desabilitado por padrão**: somente roda se `TEST_MYSQL_URL` estiver presente, em uma base de testes MySQL já inicializada. Exemplo:
+
+```bash
+TEST_MYSQL_URL='jdbc:mysql://localhost:3307/biblioteca_gof' \
+TEST_MYSQL_USER=biblioteca TEST_MYSQL_PASSWORD=biblioteca mvn test
+```
+
+O teste opcional cria dados com IDs únicos e comprova a consulta em uma **nova instância** da fábrica. **Não execute contra banco contendo dados que não possam ser utilizados como testes**.
+
+### Estado de validação do pacote
+
+Na validação local da versão final v2, foi executado `mvn clean test` com sucesso: **14 testes executados, 0 falhas, 0 erros e 0 ignorados**. O resultado inclui **13 testes de `CenariosGoFTest`** (cobrindo os dez requisitos, com cenários adicionais para R01, R04 e R09) e **1 teste de `MysqlIntegracaoOpcionalTest`**, executado com `TEST_MYSQL_URL` configurada e MySQL disponível na porta `3307`. A integração confirmou a persistência dos dados após a criação de uma nova instância da fábrica MySQL.
+
+## Organização do projeto
+
+```text
+pom.xml
+compose.yaml
+src/main/java/br/edu/pucpr/biblioteca/
+  dominio/             Livro, Emprestimo, Boleto, registros de domínio, State
+  persistencia/        Contratos e fábricas memória/MySQL (JDBC)
+  servico/             Facade, Strategy, Adapter, Observer, Command, Template,
+                      Decorator, Composite e composition root
+  api/                 iLivro, iPessoa, iEstudante, iAtendente, iEmprestimo,
+                      iDevolucao, iMulta, iCobranca, iQuitacao e tratadores
+  cli/Main.java        Somente entrada e saída de terminal
+src/main/resources/schema.sql
+src/test/java/        13 cenários GoF + integração SQL opcional
+docs/                  Rastreabilidade, registro de LLM e fontes PlantUML
+```
+
+## Alinhamento com os diagramas existentes
+
+Os PDFs fornecidos pela equipe estão preservados em `docs/referencias/`. `docs/uml/` apresenta **modelos incrementais em PlantUML** para os novos participantes GoF, máquina de estados e sequências críticas. Consulte [docs/ATUALIZACOES_UML.md](docs/ATUALIZACOES_UML.md) para atualizar o arquivo Astah `.asta`: ele não é gerado por este projeto e deve ser salvo/exportado pela equipe conforme o enunciado.
+
+As interfaces `iLivro`, `iPessoa`, `iEstudante` e `iAtendente` mantêm as operações do Trabalho 02. Na circulação, o retorno de operações passou a ser `Comprovante` (antes `void`); a emissão manual de boleto foi explicitada por **ID da devolução**. Os três pontos internos `Acervo`, `Relacionamento` e `Movimentacao` foram mantidos. A hierarquia de grupos é **em memória enquanto o processo estiver ativo**, inclusive no perfil MySQL; a persistência relacional cobre os repositórios exigidos no requisito 8.
+
+**Nota de produção:** adaptadores de bancos e e-mail são **simulações locais**, como autorizado pelo enunciado. Para cobrança real, integrar APIs autenticadas, confirmação de eventos, autenticação/autorizações, logs, retentativas com outbox e gestão segura de segredos.
+
+## Uso de ferramentas de IA
+
+O projeto foi gerado com auxílio do **ChatGPT (modelo GPT-6)** para estrutura, código inicial, cenários e documentação. Na revisão de 23/11/2026, o **Claude (Anthropic)** foi usado para revisar o código contra o enunciado e corrigir dois pontos (exclusão pelo State e fallback do cache). O uso e os limites estão detalhados em [REGISTRO_LLM.md](REGISTRO_LLM.md). Antes da entrega, os integrantes devem revisar e compreender o código, atualizar o Astah e fazer a arguição simulada; os resultados de revisão humana não são presumidos aqui.

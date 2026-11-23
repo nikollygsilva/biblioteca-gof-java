@@ -33,14 +33,30 @@
 - Compilação com `javac --release 17`: **aprovada**.
 - Execução da demonstração pelo console: **aprovada**.
 - 11 cenários com um executor local de testes e assertivas equivalentes às do JUnit: **11/11 aprovados**.
-- `mvn test`: **não executado no ambiente de geração** (Maven e downloads externos indisponíveis).
-- Teste em instância real MySQL: **não executado no ambiente de geração** (requer MySQL e driver JDBC no ambiente final).
+- `mvn clean test` na máquina da equipe, em 23/11/2026: **aprovado**, com 14 testes executados, 0 falhas, 0 erros e 0 ignorados.
+- `CenariosGoFTest`: **13/13 aprovados**, cobrindo os dez requisitos e cenários adicionais de R01, R04 e R09.
+- `MysqlIntegracaoOpcionalTest`: **1/1 aprovado**, com MySQL real disponível e `TEST_MYSQL_URL` configurada para `localhost:3307`.
+- A integração verificou reserva/empréstimo e persistência dos dados após a criação de uma nova instância da fábrica MySQL.
+
+## Revisão com Claude (Anthropic) — 23/11/2026
+
+O código gerado foi revisado contra o enunciado com o Claude (modelo Claude Opus 5.5). Foram encontrados e **corrigidos** os pontos abaixo:
+
+1. **R01 — condicional no tratador.** `TratadorDeAcervo.excluirLivro` testava `l.estado()!=Estado.LIVRE`, o que o enunciado proíbe. Foi criado o evento `excluir` em `EstadosLivro.Situacao` (recusado por padrão, aceito só em `Livre`), com `Livro.excluir()`; o tratador passou a delegar ao estado. Diagrama `estado_livro.puml` atualizado. Teste novo: `R01_excluirLivroForaDeLivreRecusadoPeloEstado`.
+2. **R09 — cache sem tratamento de falha.** `Consultas.Cache` propagava qualquer exceção do armazenamento. Agora a falha é registrada e a consulta segue para o componente original. Teste novo: `R09_falhaDoCacheDegradaParaConsultaOriginal`.
+
+3. **R03 — documento não convertido no Banco B.** Apontado em revisão feita com o ChatGPT: `AdaptadorBancoB` repassava o CPF como recebido, e o teste já enviava o CPF formatado, então não provava a conversão. O adaptador passou a montar a máscara `000.000.000-00` a partir de qualquer entrada e a recusar CPF sem 11 dígitos; o teste R03 agora envia o CPF sem máscara e confere o formato recebido pela API. A demonstração (opção 17) passou a gerar um CPF de 11 dígitos, para funcionar com os dois bancos.
+
+Pontos analisados e **mantidos**, com justificativa: a guarda `numRenovacoes < 2` fica em `Emprestimo.renovar()` (dono do dado), chamada pelo estado antes de `transitar`; `Livro.transitar` é público porque `Livro` e os estados estão em pacotes diferentes; `PoliticasMulta.porNome` é o registro da configuração e não afeta `ServicoMultas`; a hierarquia Composite permanece em memória.
+
+Também foram acrescentados comentários e Javadoc em português em todas as classes (papel de cada classe no padrão, ordem dos passos e respostas às perguntas da arguição). Uma comparação automática confirmou que só comentários mudaram nessa etapa.
+
+Verificação: 13/13 cenários aprovados com executor local equivalente ao JUnit e demonstração (opção 17) executada. `mvn test` não pôde ser executado no ambiente da revisão (sem acesso ao Maven Central).
 
 ## Ações pendentes da equipe
 
-- Rodar `mvn clean test` localmente e, com MySQL inicializado, executar o teste de integração opcional.
 - Revisar cada classe e explicar seus papéis GoF, inclusive idempotência de comandos e transações.
-- Atualizar os diagramas no **Astah** e salvar/exportar os artefatos `.asta` e PDF requeridos.
+- Conferir se os diagramas no **Astah** refletem a implementação final e salvar/exportar os artefatos `.asta` e PDF requeridos.
 - Documentar quaisquer alterações adicionais aceitas/corrigidas/descartadas pelos integrantes, com autoria e motivo.
 
 **Registro importante:** não se afirma que integrantes revisaram o código ou aceitaram decisões que ainda não tenham sido conferidas pela equipe.

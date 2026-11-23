@@ -14,9 +14,14 @@ DEVOLVIDO --> REPARANDO : inspecionar(false)
 LIVRE --> REPARANDO : enviarParaReparo() [dano no acervo]
 REPARANDO --> LIVRE : retornarDoReparo()
 REPARANDO --> INCINERADO : laudoIrrecuperavel()
+LIVRE --> [*] : excluir() / removido do acervo
 note right of RENOVADO
   A terceira renovação é RECUSADA.
   Nenhum atributo é alterado.
+end note
+note left of LIVRE
+  Só LIVRE aceita excluir();
+  nos demais estados o evento é recusado.
 end note
 note bottom of DEVOLVIDO
   A devolução NÃO libera reserva.
