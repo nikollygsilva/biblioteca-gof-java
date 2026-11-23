@@ -1,0 +1,34 @@
+@startuml
+!theme plain
+title R04 — Empréstimo transacional
+actor Estudante
+participant "TratadorDeEmprestimo" as T
+participant "FachadaCirculacao" as F
+participant "UnidadeTrabalho" as U
+participant Movimentacao as M
+participant Acervo as A
+participant Livro as L
+Estudante -> T : emprestarLivro(idLivro, idEstudante)
+T -> F : emprestar(idLivro,idEstudante)
+F -> U : executar(bloco)
+activate U
+F -> M : consultarReserva(livro,estudante)
+M --> F : Reserva
+alt reserva válida
+  F -> A : exigir(livro)
+  A --> F : Livro
+  F -> L : emprestar()
+  L --> F : EMPRESTADO
+  F -> M : removerReserva(livro)
+  F -> M : adicionarEmprestimo(vencimento+30)
+  F -> A : atualizarLivro(EMPRESTADO)
+  F --> U : Comprovante
+  U --> F : COMMIT
+  F --> T : Comprovante
+else sem reserva ou erro
+  U --> F : ROLLBACK + exceção
+  F --> T : Recusa
+end
+T --> Estudante : comprovante/erro
+deactivate U
+@enduml

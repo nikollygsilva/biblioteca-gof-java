@@ -1,0 +1,111 @@
+@startuml
+!theme plain
+title Principais papéis GoF — extensão ao diagrama de classes original
+skinparam classAttributeIconSize 0
+left to right direction
+package "State — R01" {
+  class Livro { +reservar()\n+emprestar()\n+renovar(e)\n+devolver()\n+inspecionar(bom) }
+  interface Situacao
+  class Livre
+  class Reservado
+  class Emprestado
+  class Renovado
+  class Devolvido
+  class Reparando
+  class Incinerado
+  Livro --> Situacao : delega
+  Situacao <|.. Livre
+  Situacao <|.. Reservado
+  Situacao <|.. Emprestado
+  Situacao <|.. Renovado
+  Situacao <|.. Devolvido
+  Situacao <|.. Reparando
+  Situacao <|.. Incinerado
+}
+package "Facade — R04 / Command — R06 / Observer — R05" {
+  class FachadaCirculacao
+  class Acervo
+  class Movimentacao
+  class Relacionamento
+  class Publicador
+  interface Ouvinte
+  class Executor
+  interface Comando
+  class ReservaCommand
+  class RenovacaoCommand
+  FachadaCirculacao --> Acervo
+  FachadaCirculacao --> Movimentacao
+  FachadaCirculacao --> Relacionamento
+  FachadaCirculacao --> Publicador : publica pós-commit
+  Publicador o-- Ouvinte
+  Executor --> Comando : executa uma vez/UUID
+  Comando <|.. ReservaCommand
+  Comando <|.. RenovacaoCommand
+  Executor --> FachadaCirculacao
+}
+package "Strategy — R02 / Adapter — R03" {
+  class ServicoMultas
+  interface Politica
+  class Original
+  class ComTeto
+  class ComTolerancia
+  interface CobrancaInstitucional
+  class AdaptadorBancoA
+  class AdaptadorBancoB
+  ServicoMultas --> Politica
+  Politica <|.. Original
+  Politica <|.. ComTeto
+  Politica <|.. ComTolerancia
+  ServicoMultas --> CobrancaInstitucional
+  CobrancaInstitucional <|.. AdaptadorBancoA
+  CobrancaInstitucional <|.. AdaptadorBancoB
+}
+package "Abstract Factory — R08" {
+  interface FabricaPersistencia
+  class FabricaMemoria
+  class FabricaMysql
+  interface UnidadeTrabalho
+  interface RepositorioLivro
+  interface RepositorioRelacionamento
+  interface RepositorioMovimentacao
+  FabricaPersistencia <|.. FabricaMemoria
+  FabricaPersistencia <|.. FabricaMysql
+  FabricaPersistencia --> UnidadeTrabalho
+  FabricaPersistencia --> RepositorioLivro
+  FabricaPersistencia --> RepositorioRelacionamento
+  FabricaPersistencia --> RepositorioMovimentacao
+}
+package "Template Method — R07" {
+  abstract class "Modelo<T>" as ModeloCadastro { +{final} incluir(dados) }
+  class LivroCadastro
+  class PessoaCadastro
+  class EstudanteCadastro
+  class AtendenteCadastro
+  ModeloCadastro <|-- LivroCadastro
+  ModeloCadastro <|-- PessoaCadastro
+  ModeloCadastro <|-- EstudanteCadastro
+  ModeloCadastro <|-- AtendenteCadastro
+}
+package "Decorator — R09" {
+  interface ConsultaAcervo
+  class ConsultaOriginal
+  abstract class Decorador
+  class Cache
+  class Metrica
+  ConsultaAcervo <|.. ConsultaOriginal
+  ConsultaAcervo <|.. Decorador
+  Decorador <|-- Cache
+  Decorador <|-- Metrica
+  Decorador --> ConsultaAcervo
+}
+package "Composite — R10" {
+  interface No
+  class Grupo
+  class Item
+  class Registro
+  No <|.. Grupo
+  No <|.. Item
+  Grupo o-- "*" No
+  Grupo --> Registro : verifica duplicidade
+}
+@enduml

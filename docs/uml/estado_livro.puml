@@ -1,0 +1,25 @@
+@startuml
+!theme plain
+title Máquina de estados de Livro — alinhada ao trabalho 02 + R01
+hide empty description
+[*] --> LIVRE
+LIVRE --> RESERVADO : reservar() [estudante cadastrado]
+RESERVADO --> EMPRESTADO : emprestar() [reserva do estudante]
+EMPRESTADO --> RENOVADO : renovar(e) [e.numRenovacoes < 2]\n/ e.vencimento += 30 dias, numRenovacoes++
+RENOVADO --> RENOVADO : renovar(e) [e.numRenovacoes < 2]\n/ e.vencimento += 30 dias, numRenovacoes++
+EMPRESTADO --> DEVOLVIDO : devolver() [empréstimo existe]
+RENOVADO --> DEVOLVIDO : devolver() [empréstimo existe]
+DEVOLVIDO --> LIVRE : inspecionar(true)
+DEVOLVIDO --> REPARANDO : inspecionar(false)
+LIVRE --> REPARANDO : enviarParaReparo() [dano no acervo]
+REPARANDO --> LIVRE : retornarDoReparo()
+REPARANDO --> INCINERADO : laudoIrrecuperavel()
+note right of RENOVADO
+  A terceira renovação é RECUSADA.
+  Nenhum atributo é alterado.
+end note
+note bottom of DEVOLVIDO
+  A devolução NÃO libera reserva.
+  A inspeção determina a próxima situação.
+end note
+@enduml

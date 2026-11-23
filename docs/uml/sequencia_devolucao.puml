@@ -1,0 +1,35 @@
+@startuml
+!theme plain
+title R05 — Devolução confirmada e publicação independente
+actor Atendente
+participant TratadorDeDevolucao as T
+participant FachadaCirculacao as F
+participant UnidadeTrabalho as U
+participant Movimentacao as M
+participant Livro as L
+participant Publicador as P
+participant FilaInspecao as I
+participant EmissorMulta as B
+participant Indicadores as D
+participant AvisoEmail as E
+Atendente -> T : registrarDevolucao(livro,estudante)
+T -> F : devolver(livro,estudante)
+F -> U : executar(bloco)
+activate U
+F -> M : consultarEmprestimo()
+F -> L : devolver()
+L --> F : DEVOLVIDO
+F -> M : adicionarDevolucao()
+F -> M : removerEmprestimo()
+U --> F : COMMIT
+deactivate U
+F -> P : publicar(Evento(vencimento,data,estudante,livro))
+P -> I : aoDevolver(evento)
+P -> B : aoDevolver(evento)
+note right: se atraso > 0, emite boleto
+P -> D : aoDevolver(evento)
+P -> E : aoDevolver(evento)
+note right: falhas de um ouvinte são isoladas
+F --> T : Comprovante
+T --> Atendente : devolução confirmada
+@enduml

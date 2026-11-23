@@ -1,0 +1,32 @@
+@startuml
+!theme plain
+title R06 — Renovação idempotente, mesmo sob concorrência
+actor Estudante
+participant TratadorDeEmprestimo as T
+participant Executor as X
+participant UnidadeTrabalho as U
+participant Movimentacao as M
+participant "FachadaCirculacao" as F
+participant "Livro / EstadoRenovado" as L
+Estudante -> T : renovarEmprestimo(livro, estudante)
+T -> X : submeter(Renovacao(UUID,autor,instante,...))
+X -> U : executar(bloco)
+activate U
+X -> M : registrarComando(UUID) [UNIQUE]
+alt identificador novo
+  X -> F : renovar(livro,estudante)
+  F -> M : consultarEmprestimo() FOR UPDATE
+  F -> L : renovar(emprestimo)
+  L --> F : +30 dias, numRenovacoes++ [<2]
+  F -> M : salvarEmprestimo()
+  F --> X : comprovante
+  U --> X : COMMIT
+else identificador já registrado
+  U --> X : COMMIT (sem executar)
+  X --> T : IGNORADO
+else erro/terceira renovação
+  U --> X : ROLLBACK
+end
+deactivate U
+T --> Estudante : resultado
+@enduml
