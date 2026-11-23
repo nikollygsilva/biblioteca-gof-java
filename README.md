@@ -144,4 +144,4 @@ As interfaces `iLivro`, `iPessoa`, `iEstudante` e `iAtendente` mantêm as opera�
 
 ## Uso de ferramentas de IA
 
-O projeto foi gerado com auxílio do **ChatGPT (modelo GPT-6)** para estrutura, código inicial, cenários e documentação. Na revisão de 23/11/2026, o **Claude (Anthropic)** foi usado para revisar o código contra o enunciado e corrigir dois pontos (exclusão pelo State e fallback do cache). O uso e os limites estão detalhados em [REGISTRO_LLM.md](REGISTRO_LLM.md). Antes da entrega, os integrantes devem revisar e compreender o código, atualizar o Astah e fazer a arguição simulada; os resultados de revisão humana não são presumidos aqui.
+O projeto foi gerado com auxílio do **ChatGPT (modelo GPT-6)** para estrutura, código inicial, cenários e documentação. Na revisão de 23/11/2026, o **Claude (Anthropic)** foi usado para revisar o código contra o enunciado e corrigir dois pontos (exclusão pelo State e fallback do cache). O uso e os limites estão detalhados em [REGISTRO_LLM.md](REGISTRO_LLM.md).
