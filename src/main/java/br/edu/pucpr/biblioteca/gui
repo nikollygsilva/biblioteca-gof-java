@@ -1,0 +1,72 @@
+package br.edu.pucpr.biblioteca.gui;
+
+import br.edu.pucpr.biblioteca.dominio.*;
+import br.edu.pucpr.biblioteca.dominio.Entidades.*;
+import br.edu.pucpr.biblioteca.servico.SistemaBiblioteca;
+import br.edu.pucpr.biblioteca.servico.banco.Bancos.*;
+import br.edu.pucpr.biblioteca.servico.estrategia.PoliticasMulta;
+import java.awt.*;
+import java.time.*;
+import java.util.*;
+import javax.swing.*;
+import javax.swing.border.*;
+
+/** Interface de apresentação: delega as operações aos tratadores existentes. */
+public final class BibliotecaGUI extends JFrame {
+    private final SistemaBiblioteca s;
+    private final JTextArea log = new JTextArea();
+    private final JPanel content = new JPanel(new BorderLayout(16,16));
+    private final JLabel subtitle = new JLabel("Painel geral e demonstração");
+    private final Color bg = new Color(13,19,33), panel = new Color(24,33,51), accent = new Color(92,125,255);
+    private final Font font = new Font("SansSerif",Font.PLAIN,14);
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            try {
+                String perfil=System.getenv().getOrDefault("BIBLIOTECA_PERFIL","memoria");
+                String banco=System.getenv().getOrDefault("BIBLIOTECA_BANCO","A");
+                CobrancaInstitucional cobranca = banco.equalsIgnoreCase("B") ? new AdaptadorBancoB(new ApiBancoB()) : new AdaptadorBancoA(new ApiBancoA());
+                SistemaBiblioteca sistema=new SistemaBiblioteca(SistemaBiblioteca.criarFamilia(perfil,
+                    System.getenv().getOrDefault("BIBLIOTECA_JDBC_URL","jdbc:mysql://localhost:3306/biblioteca_gof"),
+                    System.getenv().getOrDefault("BIBLIOTECA_DB_USUARIO","root"),
+                    System.getenv().getOrDefault("BIBLIOTECA_DB_SENHA","")),Clock.systemDefaultZone(),cobranca,
+                    PoliticasMulta.porNome(System.getenv().getOrDefault("BIBLIOTECA_POLITICA","ORIGINAL")));
+                new BibliotecaGUI(sistema).setVisible(true);
+            } catch(Exception e){JOptionPane.showMessageDialog(null,e.getMessage(),"Falha ao iniciar",JOptionPane.ERROR_MESSAGE);}
+        });
+    }
+    private BibliotecaGUI(SistemaBiblioteca sistema) {
+        super("BIBLIO • Gestão inteligente do acervo"); s=sistema;
+        setDefaultCloseOperation(EXIT_ON_CLOSE);setSize(1180,760);setMinimumSize(new Dimension(900,620));setLocationRelativeTo(null);
+        getContentPane().setBackground(bg);setLayout(new BorderLayout());
+        JPanel sidebar=new JPanel();sidebar.setBackground(panel);sidebar.setPreferredSize(new Dimension(235,0));sidebar.setLayout(new BoxLayout(sidebar,BoxLayout.Y_AXIS));sidebar.setBorder(new EmptyBorder(30,18,20,18));
+        JLabel logo=new JLabel("◈  BIBLIO");logo.setForeground(Color.WHITE);logo.setFont(new Font("SansSerif",Font.BOLD,27));logo.setAlignmentX(LEFT_ALIGNMENT);sidebar.add(logo);
+        JLabel tag=new JLabel("GESTÃO DE BIBLIOTECA  •  GoF");tag.setForeground(new Color(151,165,192));tag.setFont(new Font("SansSerif",Font.PLAIN,10));tag.setAlignmentX(LEFT_ALIGNMENT);sidebar.add(tag);sidebar.add(Box.createVerticalStrut(42));
+        String[] names={"Visão geral","Cadastros","Circulação","Devoluções","Financeiro","Acervo e seções","Padrões GoF"};
+        for(int i=0;i<names.length;i++){final int idx=i;JButton b=button(names[i]);b.setMaximumSize(new Dimension(200,43));b.setAlignmentX(LEFT_ALIGNMENT);b.addActionListener(e->showPage(idx));sidebar.add(b);sidebar.add(Box.createVerticalStrut(9));}
+        sidebar.add(Box.createVerticalGlue());JLabel footer=new JLabel("Java 17  •  IntelliJ  •  Maven");footer.setForeground(new Color(151,165,192));footer.setFont(new Font("SansSerif",Font.PLAIN,11));sidebar.add(footer);
+        add(sidebar,BorderLayout.WEST);
+        JPanel right=new JPanel(new BorderLayout(0,18));right.setBackground(bg);right.setBorder(new EmptyBorder(25,28,25,28));
+        JPanel head=new JPanel(new BorderLayout());head.setOpaque(false);JLabel title=new JLabel("Biblioteca Digital");title.setFont(new Font("SansSerif",Font.BOLD,28));title.setForeground(Color.WHITE);head.add(title,BorderLayout.NORTH);subtitle.setForeground(new Color(161,177,204));head.add(subtitle,BorderLayout.SOUTH);right.add(head,BorderLayout.NORTH);
+        content.setOpaque(false);right.add(content,BorderLayout.CENTER);
+        log.setEditable(false);log.setBackground(new Color(17,25,41));log.setForeground(new Color(180,229,211));log.setFont(new Font("Monospaced",Font.PLAIN,12));log.setBorder(new EmptyBorder(12,14,12,14));
+        JScrollPane scroll=new JScrollPane(log);scroll.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(new Color(55,70,95)),"  HISTÓRICO DE OPERAÇÕES  ",0,0,new Font("SansSerif",Font.BOLD,11),new Color(159,178,209)));scroll.setPreferredSize(new Dimension(0,165));right.add(scroll,BorderLayout.SOUTH);add(right,BorderLayout.CENTER);showPage(0);
+    }
+    private JButton button(String text){JButton b=new JButton(text);b.setFont(font);b.setHorizontalAlignment(SwingConstants.LEFT);b.setBackground(new Color(40,53,78));b.setForeground(Color.WHITE);b.setFocusPainted(false);b.setBorder(new EmptyBorder(11,15,11,15));b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));return b;}
+    private JPanel card(String title){JPanel p=new JPanel();p.setBackground(panel);p.setLayout(new BoxLayout(p,BoxLayout.Y_AXIS));p.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(new Color(47,61,87)),new EmptyBorder(19,20,19,20)));JLabel l=new JLabel(title);l.setForeground(Color.WHITE);l.setFont(new Font("SansSerif",Font.BOLD,18));l.setAlignmentX(LEFT_ALIGNMENT);p.add(l);p.add(Box.createVerticalStrut(15));return p;}
+    private JPanel page(){JPanel p=new JPanel(new GridLayout(0,2,16,16));p.setOpaque(false);return p;}
+    private void action(JPanel p,String title,String[] fields,java.util.function.Function<String[],Object> task){JButton b=button("＋  "+title);b.setBackground(accent);b.setAlignmentX(LEFT_ALIGNMENT);b.addActionListener(e->{JPanel form=new JPanel(new GridLayout(fields.length,2,8,9));JTextField[] inputs=new JTextField[fields.length];for(int i=0;i<fields.length;i++){form.add(new JLabel(fields[i]));inputs[i]=new JTextField(18);form.add(inputs[i]);}int result=JOptionPane.showConfirmDialog(this,form,title,JOptionPane.OK_CANCEL_OPTION,JOptionPane.PLAIN_MESSAGE);if(result!=JOptionPane.OK_OPTION)return;String[] values=Arrays.stream(inputs).map(JTextField::getText).map(String::strip).toArray(String[]::new);run(title,()->task.apply(values));});p.add(b);p.add(Box.createVerticalStrut(9));}
+    private void run(String name,java.util.function.Supplier<Object> task){try{Object result=task.get();String message="✔ "+name+" → "+(result==null?"Concluído":result);log.append(message+"\n");log.setCaretPosition(log.getDocument().getLength());}catch(Exception ex){log.append("✖ "+name+" → "+ex.getMessage()+"\n");JOptionPane.showMessageDialog(this,ex.getMessage(),"Operação recusada",JOptionPane.WARNING_MESSAGE);}}
+    private void showPage(int n){content.removeAll();JPanel grid=page();String[] titles={"Visão geral","Cadastros","Circulação","Devoluções e inspeção","Financeiro e multas","Organização do acervo","Os 10 padrões GoF"};subtitle.setText(titles[n]+"  •  interface conectada aos tratadores do projeto");
+        if(n==0){JPanel a=card("Demonstração para o professor");JLabel intro=new JLabel("Reserva → Empréstimo → Renovação → Atraso → Multa");intro.setForeground(new Color(181,194,218));a.add(intro);a.add(Box.createVerticalStrut(18));JButton demo=button("▶  EXECUTAR FLUXO COMPLETO");demo.setBackground(accent);demo.setAlignmentX(LEFT_ALIGNMENT);demo.addActionListener(e->run("Fluxo completo",this::demo));a.add(demo);grid.add(a);JPanel b=card("Situação do acervo");action(b,"Listar livros",new String[]{},v->s.livros().listar().stream().map(l->l.id()+" • "+l.titulo()+" • "+l.estado()).toList());action(b,"Consultar livro",new String[]{"ID do livro"},v->s.livros().consultarLivro(v[0]));grid.add(b);}
+        if(n==1){JPanel a=card("Cadastros de pessoas");action(a,"Cadastrar pessoa",new String[]{"CPF","Nome","Sobrenome","E-mail"},v->{s.pessoas().inserirPessoa(new Pessoa(v[0],v[1],v[2],v[3]));return "Pessoa cadastrada";});action(a,"Cadastrar estudante",new String[]{"ID do estudante","CPF já cadastrado"},v->{s.estudantes().inserirEstudante(new Estudante(v[0],v[1]));return "Estudante cadastrado";});action(a,"Cadastrar atendente",new String[]{"ID do atendente","CPF já cadastrado"},v->{s.atendentes().inserirAtendente(new Atendente(v[0],v[1]));return "Atendente cadastrado";});grid.add(a);JPanel b=card("Catálogo");action(b,"Cadastrar livro",new String[]{"ID do livro","Título"},v->{s.livros().inserirLivro(new Livro(v[0],v[1]));return "Livro cadastrado";});action(b,"Listar livros",new String[]{},v->s.livros().listar().stream().map(l->l.id()+" | "+l.titulo()+" | "+l.estado()).toList());grid.add(b);}
+        if(n==2){JPanel a=card("Empréstimos");action(a,"Reservar livro",new String[]{"ID livro","ID estudante"},v->s.emprestimos().solicitarReserva(v[0],v[1]));action(a,"Efetivar empréstimo",new String[]{"ID livro","ID estudante"},v->s.emprestimos().emprestarLivro(v[0],v[1]));action(a,"Renovar empréstimo",new String[]{"ID livro","ID estudante"},v->s.emprestimos().renovarEmprestimo(v[0],v[1]));grid.add(a);JPanel b=card("Consulta");action(b,"Consultar metadados",new String[]{"ID livro"},v->s.consultas().consultarMetadados(v[0]));grid.add(b);}
+        if(n==3){JPanel a=card("Devolução");action(a,"Registrar devolução",new String[]{"ID livro","ID estudante"},v->s.devolucoes().registrarDevolucao(v[0],v[1]));action(a,"Inspecionar livro",new String[]{"ID livro","Bom estado? (s/n)"},v->s.devolucoes().inspecionarLivro(v[0],v[1].equalsIgnoreCase("s")));grid.add(a);JPanel b=card("Reparo e descarte");action(b,"Enviar para reparo",new String[]{"ID livro"},v->s.devolucoes().enviarParaReparo(v[0]));action(b,"Retorno do reparo",new String[]{"ID livro"},v->s.devolucoes().registrarRetornoReparo(v[0]));action(b,"Laudo irrecuperável",new String[]{"ID livro"},v->s.devolucoes().laudoIrrecuperavel(v[0]));grid.add(b);}
+        if(n==4){JPanel a=card("Boletos e pagamentos");action(a,"Consultar boleto",new String[]{"ID boleto"},v->{Boleto b=s.financeiro().consultarBoleto(v[0]);return b==null?"Não encontrado":b.id()+" | R$ "+b.valor()+" | "+b.politica()+" | quitado="+b.quitado();});action(a,"Confirmar pagamento",new String[]{"ID boleto","Situação do banco (A=00 / B=LIQUIDADO)"},v->s.financeiro().confirmarPagamento(v[0],v[1]));grid.add(a);JPanel b=card("Políticas de multa (Strategy)");JTextArea t=new JTextArea("ORIGINAL: R$ 1 por dia\nTETO: limite de R$ 20\nTOLERANCIA: 2 dias sem cobrança\n\nConfigure BIBLIOTECA_POLITICA nas variáveis\nde ambiente do IntelliJ antes de executar.\nA regra permanece fora da interface.");t.setEditable(false);t.setBackground(panel);t.setForeground(Color.WHITE);t.setFont(font);b.add(t);grid.add(b);}
+        if(n==5){JPanel a=card("Seções do acervo");action(a,"Criar seção",new String[]{"Grupo pai (ex.: Biblioteca)","Nova seção"},v->{s.hierarquia().criarGrupo(v[0],v[1]);return "Seção criada";});action(a,"Associar livro",new String[]{"Seção","ID livro"},v->{s.hierarquia().associarLivro(v[0],v[1]);return "Livro associado";});grid.add(a);JPanel b=card("Organização hierárquica");action(b,"Mover livro",new String[]{"ID livro","Seção origem","Seção destino"},v->{s.hierarquia().moverLivro(v[0],v[1],v[2]);return "Livro movido";});action(b,"Contar e listar seção",new String[]{"Seção (ex.: Biblioteca)"},v->"Total="+s.hierarquia().contar(v[0])+" | IDs="+s.hierarquia().listar(v[0]));grid.add(b);}
+        if(n==6){JPanel a=card("Padrões comportamentais");addText(a,"State • Estados do livro\nStrategy • Cálculo de multas\nObserver • Eventos de devolução\nCommand • Solicitações idempotentes\nTemplate Method • Cadastros");grid.add(a);JPanel b=card("Padrões estruturais e criacionais");addText(b,"Adapter • Integração bancária\nFacade • Operações de circulação\nAbstract Factory • Persistência\nDecorator • Consultas e cache\nComposite • Hierarquia do acervo");grid.add(b);}
+        JScrollPane scroll=new JScrollPane(grid);scroll.setBorder(null);scroll.getViewport().setBackground(bg);content.add(scroll,BorderLayout.CENTER);content.revalidate();content.repaint();
+    }
+    private void addText(JPanel p,String str){JTextArea t=new JTextArea(str);t.setFont(new Font("SansSerif",Font.PLAIN,15));t.setForeground(new Color(196,211,238));t.setBackground(panel);t.setEditable(false);t.setLineWrap(true);p.add(t);}
+    private Object demo(){String id=UUID.randomUUID().toString().substring(0,7);String cpf="cpf"+id,est="E"+id,liv="L"+id;s.pessoas().inserirPessoa(new Pessoa(cpf,"Ana","Exemplo","ana@example.org"));s.estudantes().inserirEstudante(new Estudante(est,cpf));s.livros().inserirLivro(new Livro(liv,"Padrões de Projeto GoF"));StringBuilder r=new StringBuilder("\nLivro "+liv+" | Estudante "+est+"\n");r.append(s.emprestimos().solicitarReserva(liv,est)).append("\n");r.append(s.emprestimos().emprestarLivro(liv,est)).append("\n");r.append(s.emprestimos().renovarEmprestimo(liv,est)).append("\n");LocalDate venc=s.emprestimos().consultarEmprestimo(liv,est).vencimento();r.append(s.devolucoes().registrarDevolucaoEm(liv,est,venc.plusDays(5))).append("\n");String dev=s.devolucoes().consultarUltimaDevolucao(liv,est).id();Boleto boleto=s.devolucoes().emitirBoletoMulta(dev);r.append("MULTA: ").append(boleto==null?"sem multa":"R$ "+boleto.valor()+" | "+boleto.politica()+" | boleto "+boleto.id());return r.toString();}
+}
